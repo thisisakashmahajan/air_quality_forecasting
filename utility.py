@@ -5,7 +5,8 @@ from pymannkendall import original_test
 from statsmodels.tsa.api import Holt
 from statsmodels.tsa.api import SimpleExpSmoothing
 from statsmodels.tsa.api import ExponentialSmoothing
-from sklearn.metrics import mean_absolute_error
+from sklearn.metrics import mean_absolute_error, mean_squared_error
+from math import sqrt
 
 
 def get_portion_size(portion, amount):
@@ -95,3 +96,7 @@ def triple_exp_smoothing(time_series, alpha=0.1, beta=0.1, gamma=0.1,
         return forecasts
     else:
         return mean_absolute_error(time_series.values, forecasts.values)
+
+
+def root_mean_squared_error(x, predictions):
+    return sqrt(mean_squared_error(x, predictions))
