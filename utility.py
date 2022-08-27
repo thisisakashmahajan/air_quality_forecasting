@@ -1,102 +1,61 @@
 import pandas as pd
 import numpy as np
-from statsmodels.tsa.stattools import adfuller
-from pymannkendall import original_test
-from statsmodels.tsa.api import Holt
-from statsmodels.tsa.api import SimpleExpSmoothing
-from statsmodels.tsa.api import ExponentialSmoothing
-from sklearn.metrics import mean_absolute_error, mean_squared_error
+from sklearn.metrics import mean_squared_error as mse
+from sklearn.metrics import r2_score
+from sklearn.metrics import mean_absolute_error as mae
+from sklearn.metrics import mean_absolute_percentage_error as mape
 from math import sqrt
 
 
-def get_portion_size(portion, amount):
-    return int(round(portion * amount))
-
-
-def get_average(portion, x):
-    amount = get_portion_size(portion, len(x))
-    return round(np.average(x[:amount]), 2)
-
-
-def time_series_test(x):
-    adf_score = adfuller(x)
-    mk_score = original_test(x)
-    return adf_score[1], mk_score.p
-
-
+# Converts the time series data into a supervised machine learning dataset i.e., N features and 1 output variable
 def sequence_to_table(data, look_back=5):
     column_name = 'feature'
-    columns = []
+    columns = []  # List of column names
     for i in range(look_back):
+        # When look_back = 5, 5 different columns names will be generated. For example, feature1, feature2,..., feature5
         columns.append(column_name + str(i + 1))
     features, target = [], []
 
     for i in range(len(data) - look_back - 1):
+        # When look_back = 5, select first 5 records from ith index
         feature = data[i:i + look_back]
         if len(feature) != look_back:
             continue
+        # Save the selected records as a separate array
         features.append(feature)
+        # The immediate next value of these features would be predicted value
         target.append(data[i + look_back])
+    # Create dataframe of the feature
     df = pd.DataFrame(features)
+    # Set column names
     df.columns = columns
+    # 'next' column is nothing value to be predicted based on selected features
     df['next'] = pd.Series(target)
     return df
 
 
-def simple_exp_smoothing(time_series, alpha=0.1, forecast_for=30, return_forecast=False):
-    """
-    :param time_series: A Pandas dataframe containing time series
-    :param alpha: smoothing level
-    :param forecast_for: Number of days to forecast ahead
-    :param return_forecast: Whether to return the forecasted values
-    :return: mean absolute error of forecasts
-    """
-    model = SimpleExpSmoothing(time_series[:-forecast_for]).fit(smoothing_level=alpha)
-    forecasts = model.forecast(forecast_for)
-    if return_forecast:
-        return forecasts
-    return mean_absolute_error(time_series[-forecast_for:], forecasts.values)
+def metrics(y, forecast):
+    _rmse = sqrt(mse(y, forecast))
+    _r2 = r2_score(y, forecast)
+    _mae = mae(y, forecast)
+    _mape = mape(y, forecast)
+
+    print('RMSE: %.2f' % _rmse)
+    print('R2 score: %.2f' % _r2)
+    print('MAE: %.2f' % _mae)
+    print('MAPE: %.2f' % _mape)
 
 
-def double_exp_smoothing(time_series, alpha=0.1, beta=0.1, forecast_for=30, return_forecast=False):
-    """
-    :param time_series: A Pandas dataframe containing time series
-    :param alpha: smoothing level
-    :param beta: smoothing slope
-    :param forecast_for: Number of days to forecast ahead
-    :param return_forecast: Whether to return the forecasted values
-    :return: mean absolute error of forecasts
-    """
-    model = Holt(time_series[:-forecast_for]).fit(smoothing_level=alpha, smoothing_slope=beta)
-    forecasts = model.forecast(forecast_for)
-    if return_forecast:
-        return forecasts
-    return mean_absolute_error(time_series[-forecast_for:], forecasts.values)
+def forecast_for(model, steps, last_record, seq_mean):
+    predictions = []
+    input = last_record
 
+    for i in range(steps):
+        input = input.reshape(1, 1, 30)
+        predict = model.predict(input)
+        input = input.ravel()
+        predictions.append(round(predict[0][0] + seq_mean, 2))
+        input = np.delete(input, 0)
+        input = np.append(input, predict[0][0])
 
-def triple_exp_smoothing(time_series, alpha=0.1, beta=0.1, gamma=0.1,
-                         phi=0.1, forecast_for=30, return_forecast=False):
-    """
-    :param time_series: A Pandas dataframe containing time series
-    :param alpha: smoothing level
-    :param beta: smoothing slope
-    :param gamma: smoothing seasonal
-    :param phi: damping slope
-    :param forecast_for: Number of days to forecast ahead
-    :param return_forecast: Whether to return the forecasted values
-    :return: mean absolute error of forecasts
-    """
-    model = ExponentialSmoothing(time_series,
-                                 trend='add', seasonal='add').fit(smoothing_level=alpha,
-                                                                  smoothing_slope=beta,
-                                                                  smoothing_seasonal=gamma,
-                                                                  damping_slope=phi)
-    forecasts = model.predict(start=0, end=len(time_series)-1)
-    if return_forecast:
-        return forecasts
-    else:
-        return mean_absolute_error(time_series.values, forecasts.values)
-
-
-def root_mean_squared_error(x, predictions):
-    return sqrt(mean_squared_error(x, predictions))
+    return predictions
