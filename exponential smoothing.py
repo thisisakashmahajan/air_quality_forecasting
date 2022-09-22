@@ -31,7 +31,6 @@ df['PM25'] = df['PM25'] - seq_mean
 
 # Triple Exponential Smoothing
 p = 0.5  # This value represents damping factor for exponential smoothing
-
 model = ExponentialSmoothing(endog=df, trend='add', seasonal='add', damped_trend=False).fit(
         smoothing_level=0.8,
         smoothing_trend=0.2,
@@ -50,7 +49,7 @@ mae = mean_absolute_error(df.PM25.values, fitted_series + seq_mean)
 # print('MAE:', round(mae, 2))
 
 # Next 15 days forecasts can be retrieved
-forecast = model.forecast(15)
+forecast = model.forecast(60)
 
 for i in forecast.values:
     print(i + seq_mean)
