@@ -1,6 +1,5 @@
 # warnings are imported to supress unwanted warnings
 import warnings
-
 # calculates square root of number - used to calculate RMSE
 from math import sqrt
 import numpy as np
@@ -44,15 +43,12 @@ error = sqrt(mean_squared_error(df.PM25.values, fitted_series + seq_mean))
 r2 = r2_score(df.PM25.values, fitted_series + seq_mean)
 mae = mean_absolute_error(df.PM25.values, fitted_series + seq_mean)
 
-# print('RMSE:', round(error, 2))
-# print('R2 score:', round(r2, 2))
+print('RMSE:', round(error, 2))
+print('R2 score:', round(r2, 2))
 # print('MAE:', round(mae, 2))
 
 # Next 15 days forecasts can be retrieved
 forecast = model.forecast(60)
-
-for i in forecast.values:
-    print(i + seq_mean)
 
 plt.plot(np.append(df.PM25.values[-50:], forecast), label='Forecasted series')
 plt.plot(df.PM25.values[-50:], label='Original series', color='black')
